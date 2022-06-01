@@ -1,0 +1,609 @@
+C51 COMPILER V9.60.0.0   LCD128_64                                                         03/04/2021 10:48:49 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE LCD128_64
+OBJECT MODULE PLACED IN .\Objects\LCD128_64.obj
+COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE UserSrc\LCD128_64.C LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(.\UserSrc;.\St
+                    -cLib;.\UserSrc\ENG) DEBUG OBJECTEXTEND PRINT(.\Listings\LCD128_64.lst) OBJECT(.\Objects\LCD128_64.obj)
+
+line level    source
+
+   1          /*--------------------------------------------------------
+   2                  LCD128_64.C
+   3                  3"LCD底层驱动
+   4                  by dylin,2011,08
+   5          
+   6          * VT12864C一共支持4行中文显示
+   7          * 每行支持8个汉字或16个ASCII字符，最多显示64个char
+   8          --------------------------------------------------------*/
+   9          #include "Config.H"
+  10          #include "LCD.H"
+*** WARNING C318 IN LINE 10 OF UserSrc\LCD.H: can't open file 'const.h'
+*** WARNING C322 IN LINE 41 OF UserSrc\LCD.H: unknown identifier
+*** WARNING C322 IN LINE 223 OF UserSrc\LCD.H: unknown identifier
+  11          #include "Driver.H"
+  12          #include <string.h>
+  13          
+  14          #define DelayUs(cn200us) delay(2000)
+  15          #define TAS_DELAY       {_nop_();_nop_();_nop_();_nop_();};
+  16          #define NOP_DELAY       {_nop_();_nop_();_nop_();_nop_();};
+  17          
+  18          #ifdef LCD_128_64
+  19          /*******************************************************************************/
+  20          #ifdef ENGLISH_MODE
+  21                  #warning "[dylin] LCD 128x64 English mode: Graphic"
+*** WARNING C320 IN LINE 21 OF UserSrc\LCD128_64.C: "[dylin] LCD 128x64 English mode: Graphic"
+  22                  #define GRAPHIC_MODE
+  23                  #include <Ascii_Zimo8x16.H>
+*** WARNING C318 IN LINE 23 OF UserSrc\LCD128_64.C: can't open file 'Ascii_Zimo8x16.H'
+  24                  #include <Hebrew_Zimo8x16.h>
+*** WARNING C318 IN LINE 24 OF UserSrc\LCD128_64.C: can't open file 'Hebrew_Zimo8x16.h'
+  25                  #include <Arab_Zimo8x16.h>
+*** WARNING C318 IN LINE 25 OF UserSrc\LCD128_64.C: can't open file 'Arab_Zimo8x16.h'
+  26                  #include <Latin_Zimo8x16.h>
+*** WARNING C318 IN LINE 26 OF UserSrc\LCD128_64.C: can't open file 'Latin_Zimo8x16.h'
+  27                  #include <ISO8859_5Zimo8x16.h>  //Cyrillic
+*** WARNING C318 IN LINE 27 OF UserSrc\LCD128_64.C: can't open file 'ISO8859_5Zimo8x16.h'
+  28                  #include <Korean_ZiMo16x16.h>
+*** WARNING C318 IN LINE 28 OF UserSrc\LCD128_64.C: can't open file 'Korean_ZiMo16x16.h'
+  29          #else
+                      #warning "[dylin] LCD 128x64 Chinese mode"
+              #endif
+  32          /* 2013-12-12 update, logo store in FLASH
+  33          #ifdef BUILD_AUS
+  34                  #include "Espritec.H"   //OEM LOGO
+  35          #endif
+  36          #ifdef BUILD_HAVEN
+  37                  #include "Haven.H"              //OEM LOGO
+  38          #endif
+  39          #ifdef BUILD_LEAMRA
+  40                  #include "Leamra.H"
+  41          #endif
+  42          #ifdef BUILD_CYFRAL
+  43                  #include "Cyfral.H"
+  44          #endif
+C51 COMPILER V9.60.0.0   LCD128_64                                                         03/04/2021 10:48:49 PAGE 2   
+
+  45          #ifdef BUILD_EAMRA
+  46                  #include "Eamra.H"
+  47          #endif
+  48          */
+  49          /********************************************************************/
+  50          #define LCD_WIDTH       128
+  51          #define LCD_HEIGHT      64
+  52          bool g_bShowNameList;
+  53          bool bRight2Left;
+  54          /*-----------private function----------------------------------*/
+  55          //static void IconToCGRam(void);
+  56          static void LCDCmd(UCHAR chCmd);
+  57          /*=======================================================================*/
+  58          static UCHAR xdata lcdRow;      //VT12864C一共支持4行中文显示
+  59          static UCHAR xdata lcdCol;      //每行支持8个汉字或16个ASCII字符，最多显示64个char
+  60          UCHAR mapGDRAM[LCD_HEIGHT][LCD_WIDTH/8];                                //GDRAM map, y=64, x=16*8
+  61          /***********************************************************************************/
+  62          
+  63          /*-------------------------------------------------------------------------------*/
+  64          int WaitLCD(void)               //看LCD是否空闲
+  65          {
+  66   1              bool bOk=0;
+  67   1              UCHAR i=0;
+  68   1              Set_LCD_Data(0xFF);
+  69   1              LCD_RS_LOW;
+  70   1              LCD_RW_HIGH;
+  71   1              do{
+  72   2                      TAS_DELAY;
+  73   2                      LCD_ENABLE;
+  74   2                      NOP_DELAY;
+  75   2                      //TAS_DELAY;
+  76   2                      if(!biLCDBf)
+  77   2                      {
+  78   3                              bOk=1;
+  79   3                              return 0;
+  80   3                      }
+  81   2                      else
+  82   2                      {
+  83   3                              DelayUs(10);
+  84   3                              i++;
+  85   3                              if(!i)  //等待时间到
+  86   3                              {
+  87   4                                      LCD_DISABLE;
+  88   4                                      break;  
+  89   4                              }
+  90   3                      }
+  91   2                      LCD_DISABLE;
+  92   2                      //NOP_DELAY;
+  93   2              }while(!bOk);
+  94   1              return -1;
+  95   1      }
+  96          
+  97          char LCDInit(void)
+  98          {
+  99   1              LCDCmd(cnLCDSetDataLen8);       //set data len 8
+ 100   1              DelayUs(cn200us);
+ 101   1              LCDCmd(cnLCDSetExtend);
+ 102   1              DelayUs(cn200us);
+ 103   1              LCDCmd(cnLCDEnCGRam);
+ 104   1              DelayUs(cn200us);
+ 105   1              LCDCmd(cnLCDSetBasic);          //Set basic instruction
+ 106   1              DelayUs(cn200us);
+C51 COMPILER V9.60.0.0   LCD128_64                                                         03/04/2021 10:48:49 PAGE 3   
+
+ 107   1              LCDCmd(cnLCDDisOn);             /*打开显示屏    */
+ 108   1              DelayUs(cn200us);
+ 109   1              LCDCmd(cnLCDEntryMode);
+ 110   1              DelayUs(cn200us);               
+ 111   1      //              IconToCGRam();                  /*32×32图标*/
+ 112   1      //      DelayUs(cn200us);
+ 113   1              LCDCmd(cnLCDEnGraphic);         /*开启图形显示*/
+ 114   1              DelayUs(cn200us);
+ 115   1              LCDCmd(cnCmdClr);               /*清屏*/
+ 116   1              LCDStart();
+*** WARNING C206 IN LINE 116 OF UserSrc\LCD128_64.C: 'LCDStart': missing function-prototype
+ 117   1              g_bShowNameList = false;
+ 118   1              return 0;
+ 119   1      }
+ 120          /*--------------------------------------------------------------*/      
+ 121          static void LCDCmd(UCHAR chCmd) //写指令到LCD
+ 122          {
+ 123   1              if(chCmd == cnCmdClr)
+ 124   1              {
+ 125   2                      lcdRow=0;
+ 126   2                      lcdCol=0;
+ 127   2              }
+ 128   1              WaitLCD();
+ 129   1              LCD_RS_LOW;             /*数据输出*/
+ 130   1              LCD_RW_LOW;             /*写输出  */
+ 131   1              NOP_DELAY;
+ 132   1              Set_LCD_Data(chCmd);    /*数据输出到数据口 */
+ 133   1              NOP_DELAY;
+ 134   1              LCD_ENABLE;             /*读入到LCM*/
+ 135   1              //NOP_DELAY;
+ 136   1              LCD_DISABLE;
+ 137   1              //NOP_DELAY;
+ 138   1      }
+ 139          /*------------------------------------------------------------------------*/
+ 140          //下一行显示
+ 141          static void LCDAddRow(void)
+ 142          {
+ 143   1              lcdRow++;
+ 144   1      #ifdef GRAPHIC_MODE
+ 145   1              if(lcdRow >= 4)
+ 146   1                      lcdRow = 0;
+ 147   1      #else   
+                      switch(lcdRow)
+                      {
+                              case 0:
+                                      LCDCmd(cnCmdSetDAddr);  //换行
+                                      break;
+                              case 1:
+                                      LCDCmd(cnCmdSetDAddr | Bin(00010000));  //换行
+                                      break;
+                              case 2:
+                                      LCDCmd(cnCmdSetDAddr | Bin(00001000));  //换行
+                                      break;
+                              case 3:
+                                      LCDCmd(cnCmdSetDAddr | Bin(00011000));  //换行
+                                      break;
+                              default:
+                                      lcdRow=0;
+                                      LCDCmd(cnCmdSetDAddr);  //换行
+                                      break;
+                      }
+              #endif  
+C51 COMPILER V9.60.0.0   LCD128_64                                                         03/04/2021 10:48:49 PAGE 4   
+
+ 168   1              lcdCol=0;
+ 169   1      }
+ 170          //#define GRAPHIC_TEST
+ 171          //2008-1-17,重新改写显示驱动，入口pInfo：要显示的信息；m：模式
+ 172          void WriteLCD(const UCHAR *pInfo, enum LCDInfoMode m)   //写数据到屏幕上显示
+ 173          {
+ 174   1      #ifdef GRAPHIC_MODE
+ 175   1              UCHAR x,y;
+ 176   1              UCHAR c;
+ 177   1              char utf[4];
+ 178   1              const typFNT_Ascii *Font,*dFont;
+*** ERROR C141 IN LINE 178 OF UserSrc\LCD128_64.C: syntax error near '*', expected ';'
+ 179   1              //static char ctest;
+ 180   1              bool bBackup;
+ 181   1              static bool bLastRight;
+ 182   1              int iUnicode,i;
+ 183   1              //const UCHAR *pTemp;
+ 184   1              
+ 185   1              if(pInfo == NULL) return;
+ 186   1              bBackup = bRight2Left;
+ 187   1              switch(m)
+ 188   1              {
+ 189   2                      case LCD_INFO_NEW:              //全新一屏信息, Clean screen first
+ 190   2                              for(y=0;y<LCD_HEIGHT;y++)
+ 191   2                              {       //clean
+ 192   3                                      for(x=0;x<LCD_WIDTH/8;x++)
+ 193   3                                      {
+ 194   4                                              mapGDRAM[y][x] = 0;
+ 195   4                                      }
+ 196   3                              }
+ 197   2                              lcdRow=0;lcdCol=0;
+ 198   2                              DelayMs(5);
+ 199   2                              bRight2Left = LCDReverseCol(pInfo);
+ 200   2                              bLastRight = bRight2Left;
+ 201   2                              break;
+ 202   2                      case LCD_INFO_NEW_LINE:         //新一行信息
+ 203   2                              LCDAddRow();
+ 204   2                              bRight2Left = LCDReverseCol(pInfo);
+ 205   2                              bLastRight = bRight2Left;
+ 206   2                              break;
+ 207   2                      case LCD_INFO_ADD:                      //在原有信息背后增加
+ 208   2                              bRight2Left = bLastRight;
+ 209   2                              break;
+ 210   2              }
+ 211   1              if(g_bShowNameList){
+ 212   2                      bRight2Left = false;
+ 213   2              }
+ 214   1              while((*pInfo != '\0') && (*pInfo != '\n'))
+ 215   1              {       //不是结束字符
+ 216   2                      //pTemp = pInfo;
+ 217   2                      dFont = NULL;
+ 218   2                      c = *pInfo;
+ 219   2                      if(c == '\r')
+ 220   2                      {
+ 221   3                              LCDAddRow();    //换行
+ 222   3                              pInfo++;
+ 223   3                              continue;
+ 224   3                      }
+ 225   2      
+ 226   2                      lcdCol++;
+ 227   2                      if(lcdCol > LCD_MAX_COL){               //要换行
+ 228   3                              if(g_bShowNameList){
+C51 COMPILER V9.60.0.0   LCD128_64                                                         03/04/2021 10:48:49 PAGE 5   
+
+ 229   4                                      break;  //only display 1 line
+ 230   4                              }else{
+ 231   4                                      LCDAddRow();
+ 232   4                              }
+ 233   3                      }
+ 234   2                      
+ 235   2                      Font = &AsciiFont['?'-' '];     //unknow char
+ 236   2                      if(c >= ' ')
+ 237   2                      {       //can display
+ 238   3                              if(c <= 0x80){ //ASCII
+ 239   4                                      Font = &AsciiFont[c - ' '];
+ 240   4                              }else{  //UTF-8
+ 241   4                                      pInfo++;
+ 242   4                                      utf[0] = c;utf[1] = *pInfo;
+ 243   4                                      _CLR_WDT;
+ 244   4                                      if((utf[0] >= 0xC0) && (utf[0] <= 0xDF) && (utf[1] >= 0x80) && (utf[1] < 0xC0))
+ 245   4                                      {       //2 bytes chars in UTF-8
+ 246   5                                              utf[0] &= 0x1F;
+ 247   5                                              utf[1] &= 0x3F;
+ 248   5                                              iUnicode = utf[0] << 6;
+ 249   5                                              iUnicode += utf[1];
+ 250   5                                              if((iUnicode >= LATIN_START) && (iUnicode <= LATIN_END)){       //Latin-1
+ 251   6                                                      Font=&LatinFont[iUnicode-LATIN_START];
+ 252   6                                              }else if((iUnicode >= CYRILLIC_START) && (iUnicode <= CYRILLIC_END)){           //Cyrillic
+ 253   6                                                      Font=&CyrillicFont[iUnicode-CYRILLIC_START];
+ 254   6                                              }else if((iUnicode >= HEBREW_START) && (iUnicode <= HEBREW_END)){       //Hebrew
+ 255   6                                                      Font=&HebrewFont[iUnicode-HEBREW_START];
+ 256   6                                              }else if((iUnicode >= 0x0600) && (iUnicode <= 0x06FF)){ //Arab
+ 257   6                                                      Font=&ArabFont[iUnicode-0x0600];
+ 258   6                                              }
+ 259   5                                      }
+ 260   4                                      else if((utf[0] >= 0xE0) && (utf[0] <= 0xEF) && (utf[1] >= 0x80) && (utf[1] < 0xC0))
+ 261   4                                      {       //3 bytes chars in UTF-8, 16x16?
+ 262   5                                              pInfo++; utf[2] = *pInfo;
+ 263   5                                              if((utf[2] >= 0x80) && (utf[2] < 0xC0)){        //Check OK
+ 264   6                                                      utf[0] &= 0x0F;
+ 265   6                                                      utf[1] &= 0x3F;
+ 266   6                                                      utf[2] &= 0x3F;
+ 267   6                                                      iUnicode = utf[0] << 12;
+ 268   6                                                      iUnicode |= utf[1] << 6;
+ 269   6                                                      iUnicode |= utf[2];
+ 270   6                                                      if((iUnicode >= KOREAN_START) && (iUnicode <= KOREAN_END)){     //Korean
+ 271   7                                                              for(i=0;i<KOREAN_CHARS_COUNT;i++){
+ 272   8                                                                      if(KoreanChars[i] == (short int)(iUnicode)){
+ 273   9                                                                              Font = &KoreanFont[2*i];        //1 Korean char is store in 2 typ_FNTAscii
+ 274   9                                                                              dFont = &KoreanFont[2*i+1];
+ 275   9                                                                              break;
+ 276   9                                                                      }
+ 277   8                                                              }
+ 278   7                                                      }
+ 279   6                                              }
+ 280   5                                      }
+ 281   4                                      else
+ 282   4                                      {       //4 bytes chars
+ 283   5                                              
+ 284   5                                      }
+ 285   4                              }
+ 286   3                      }
+ 287   2                      if(lcdCol != 0) 
+ 288   2                              x = lcdCol-1;
+ 289   2                      else{
+ 290   3                              x = 0;
+C51 COMPILER V9.60.0.0   LCD128_64                                                         03/04/2021 10:48:49 PAGE 6   
+
+ 291   3                              lcdCol = 1;
+ 292   3                      }
+ 293   2                      if(dFont){
+ 294   3      #if 0                   
+                                      if((x & 0x01) != 0){    //CJK must 0 address align?
+                                              lcdCol ++;
+                                              x++;
+                                              if(x >= (LCD_WIDTH/8-1)){
+                                                      pInfo = pTemp;
+                                                      continue;
+                                              }
+                                      }
+              #else
+ 304   3                              if(x == (LCD_WIDTH/8 - 1)){     //at last column
+ 305   4                                      dFont = NULL;
+ 306   4                                      /*LCDAddRow();  //换行
+ 307   4                                      x = 0;
+ 308   4                                      lcdCol = 1;*/
+ 309   4                              }
+ 310   3      #endif                  
+ 311   3                              lcdCol++;
+ 312   3                      }
+ 313   2                      if(bRight2Left){
+ 314   3                              x = (LCD_WIDTH/8-1)-x;
+ 315   3                      }
+ 316   2                      for(y=0;y<ASC_CHR_HEIGHT;y++)
+ 317   2                      {
+ 318   3                              mapGDRAM[y+ASC_CHR_HEIGHT*lcdRow][x] = Font->Msk[y];
+ 319   3                              if(dFont){
+ 320   4                                      mapGDRAM[y+ASC_CHR_HEIGHT*lcdRow][x+1] = dFont->Msk[y];
+ 321   4                              }
+ 322   3                      }
+ 323   2                      pInfo++;
+ 324   2              };      //while
+ 325   1              bRight2Left = bBackup;
+ 326   1      
+ 327   1      #else   // Chinese mode
+                      if(pInfo == NULL) return;
+                      switch(m)
+                      {
+                              case LCD_INFO_NEW:              //全新一屏信息
+                                      LCDCmd(cnCmdClr);               /*清屏*/
+              //                              lcdRow=0;
+              //                              lcdCol=0;
+                                      DelayMs(cn20ms);
+                                      break;
+                              case LCD_INFO_NEW_LINE:         //新一行信息
+                                      LCDAddRow();
+                                      break;
+                              case LCD_INFO_ADD:                      //在原有信息背后增加
+                              
+                                      break;
+                      }
+                      while(*pInfo != '\0')
+                      {       //不是结束字符
+                              if(*pInfo == '\r')
+                              {
+                                      LCDAddRow();    //换行
+                                      pInfo++;
+                                      continue;
+                              }
+              
+C51 COMPILER V9.60.0.0   LCD128_64                                                         03/04/2021 10:48:49 PAGE 7   
+
+                              lcdCol++;
+                              if(lcdCol > LCD_MAX_COL)                //要换行
+                              {
+                                      if(g_bShowNameList)
+                                      {
+                                              break;
+                                      }
+                                      else
+                                              LCDAddRow();
+                              }
+                              WaitLCD();
+                              LCD_RS_HIGH;            /*数据输出*/
+                              LCD_RW_LOW;             /*写输出  */
+                              NOP_DELAY;
+                              Set_LCD_Data(*pInfo);   /*数据输出到数据口 */
+                              NOP_DELAY;
+                              LCD_ENABLE;             /*读入到LCM*/
+                              NOP_DELAY;
+                              LCD_DISABLE;
+                              pInfo++;
+                      };
+              #endif  
+ 375   1      }
+ 376          /*************************************************************************************/
+ 377          UCHAR LCD_GetRows(void)
+ 378          {
+ 379   1              return lcdRow;
+ 380   1      }
+ 381          UCHAR LCD_SetCurrentRow(UCHAR row)
+ 382          {
+ 383   1              if(row < 3)
+ 384   1              {
+ 385   2                      lcdRow = row;
+ 386   2              }
+ 387   1              lcdCol = 0;             //move cursor to the first on this row
+ 388   1              return lcdRow;
+ 389   1      }
+ 390          /*****************************************************************************************/
+ 391          void DisplayLcd(void)
+ 392          {
+ 393   1      #ifdef GRAPHIC_MODE
+ 394   1              BitBlt((UCHAR *)mapGDRAM);
+ 395   1      #endif  
+ 396   1      }
+ 397          /*****************************************************************************************/
+ 398          char ReadLCD(void)      //读数据
+ 399          {
+ 400   1              char i;
+ 401   1              WaitLCD();
+ 402   1              LCD_RS_HIGH;            /*数据读*/
+ 403   1              LCD_RW_HIGH;            /*读输出  */
+ 404   1              Set_LCD_Data(0xFF);     /*数据输出到数据口 */
+ 405   1              LCD_ENABLE;             /*读入到LCM*/
+ 406   1              NOP_DELAY;
+ 407   1              NOP_DELAY;
+ 408   1              Get_LCD_Data(i);
+ 409   1              LCD_DISABLE;
+ 410   1              return i;
+ 411   1      }
+ 412          
+ 413          /*=========================================================================*/
+ 414          static void LcdRamByte(UCHAR chData)
+C51 COMPILER V9.60.0.0   LCD128_64                                                         03/04/2021 10:48:49 PAGE 8   
+
+ 415          {
+ 416   1              WaitLCD();
+ 417   1              LCD_RS_HIGH;            //数据输出
+ 418   1              LCD_RW_LOW;             /*写输出  */
+ 419   1              Set_LCD_Data(chData);   /*数据输出到数据口 */
+ 420   1              TAS_DELAY;
+ 421   1              LCD_ENABLE;             /*读入到LCM*/
+ 422   1              NOP_DELAY;
+ 423   1              //TAS_DELAY;
+ 424   1              LCD_DISABLE;
+ 425   1      }
+ 426          void CleanScreen()
+ 427          {
+ 428   1              LCDCmd(cnCmdClr);               /*清屏*/        
+ 429   1      }
+ 430          void BitBlt(const UCHAR * pBmp)
+ 431          {       // total 1024 bytes
+ 432   1              UCHAR i,j;
+ 433   1              const UCHAR * pNextFrame=pBmp+512;      //half
+ 434   1      
+ 435   1              for(i=0;i<(LCD_HEIGHT/2);i++)   //y
+ 436   1              {       //因为VT12864的显示RAM是交叉且颠倒的，所以要“隔行”颠倒扫描（这部分处理在BmpToLcd程序中）
+ 437   2                      LCDCmd(cnLCDGraphicOn);                 //扩充指令集
+ 438   2                      LCDCmd(cnCmdSetGRam | i);               //设置Y
+ 439   2                      LCDCmd(cnCmdSetGRam | 0x00);    //设置X
+ 440   2                      LCDCmd(cnLCDSetBasic);
+ 441   2                      for(j=0;j<16;j++)       //x=8*16=128
+ 442   2                      {       //j=0~15时输出上半部分128*32的数据，j=15~31时输出下半部分128*32的数据。
+ 443   3                              LcdRamByte(*pBmp);
+ 444   3                              pBmp++;
+ 445   3                      }
+ 446   2                      for(j=16;j<32;j++)      //x
+ 447   2                      {       //j=0~15时输出上半部分128*32的数据，j=15~31时输出下半部分128*32的数据。
+ 448   3                              LcdRamByte(*pNextFrame);
+ 449   3                              pNextFrame++;
+ 450   3                      }
+ 451   2              }
+ 452   1      }
+ 453          
+ 454          /*************************************************************************************************
+ 455          * 因为VT12864的显示RAM是交叉且颠倒的，所以要“隔行”颠倒扫描（这部分处理在BmpToLcd程序中）
+ 456          *       read 1 line from FLASH and write
+ 457          *       UCHAR mapGDRAM[LCD_HEIGHT][LCD_WIDTH/8];                                //GDRAM map, y=64, x=16*8
+ 458          **********************************************************************************************/
+ 459          int ShowLogo(void)
+ 460          {       // total 1024 bytes
+ 461   1              UCHAR i,j;
+ 462   1              Flash_GetLogo(mapGDRAM[0],LCD_WIDTH/8,0);       //GetHead
+ 463   1              if((mapGDRAM[0][0] == 'L') && (mapGDRAM[0][1] == 'C') && (mapGDRAM[0][2] == 'D'))
+ 464   1              {
+ 465   2                      for(i=0;i<LCD_HEIGHT;i++)       //y
+ 466   2                      {       
+ 467   3                              Flash_GetLogo(mapGDRAM[i],LCD_WIDTH/8,i+2);     //GetLine
+ 468   3                      }
+ 469   2      #ifndef GRAPHIC_MODE
+                              LCDCmd(cnCmdClr);               /*清屏*/
+                              BitBlt((UCHAR *)mapGDRAM);
+              #endif          
+ 473   2                      return 1;
+ 474   2              }
+ 475   1              return 0;
+ 476   1      }
+C51 COMPILER V9.60.0.0   LCD128_64                                                         03/04/2021 10:48:49 PAGE 9   
+
+ 477          
+ 478          /**********************************************************
+ 479          * Reverse display one row
+ 480          *       Input: row      UCHAR   0~3, row number
+ 481          *********************************************************/
+ 482          void LCDReverseRow(int row)
+ 483          {
+ 484   1      #ifndef GRAPHIC_MODE
+                      if((row < 0) || (row > 3))
+                      {
+                              LCDCmd(cnLCDDisOn);             //Cursor off
+                              return;
+                      }
+                      LCDCmd(cnLCDDisCursorOn);
+                      DelayUs(cn200us);
+                      switch(row)
+                      {
+                              case 0:
+                                      LCDCmd(cnCmdSetDAddr);
+                                      break;
+                              case 1:
+                                      LCDCmd(cnCmdSetDAddr | Bin(00010000));
+                                      break;
+                              case 2:
+                                      LCDCmd(cnCmdSetDAddr | Bin(00001000));
+                                      break;
+                              case 3:
+                                      LCDCmd(cnCmdSetDAddr | Bin(00011000));
+                                      break;
+                              default:
+                                      LCDCmd(cnCmdSetDAddr);
+                                      break;
+                      }
+              #else   //graphic mode
+ 511   1              int x,y;
+ 512   1              if((row >= 0) && (row <= 3)){
+ 513   2                      for(x=0;x<LCD_WIDTH/8;x++){
+ 514   3                              for(y=0;y<ASC_CHR_HEIGHT;y++){
+ 515   4                                      mapGDRAM[y+ASC_CHR_HEIGHT*row][x] = ~mapGDRAM[y+ASC_CHR_HEIGHT*row][x];
+ 516   4                              }
+ 517   3                      }
+ 518   2              }
+ 519   1      #endif  
+ 520   1      }
+ 521          /***********************************************************************************
+ 522          *
+ 523          *
+ 524          ******************************************************************************/
+ 525          bool LCDReverseCol(const UCHAR * pInfo)
+ 526          {
+ 527   1      #ifdef GRAPHIC_MODE
+ 528   1              int i=0;
+ 529   1              volatile int len = 0;
+ 530   1              UCHAR c;
+ 531   1              bool bNeedReverse = true;       //all ASCII chars, need reverse
+ 532   1              
+ 533   1              if(pInfo == NULL) 
+ 534   1                      return true;
+ 535   1              
+ 536   1              if(bRight2Left)
+ 537   1              {
+ 538   2                      c = *pInfo;
+C51 COMPILER V9.60.0.0   LCD128_64                                                         03/04/2021 10:48:49 PAGE 10  
+
+ 539   2                      while((c != '\0') && (c != '\r') && (c != '\n'))
+ 540   2                      {
+ 541   3                              if(c >= ' ')
+ 542   3                              {       //can display
+ 543   4                                      len++;
+ 544   4                                      if(c <= 0x80)   //ASCII
+ 545   4                                      {
+ 546   5                                      }
+ 547   4                                      else    //Unicode
+ 548   4                                      {       //2bytes = 1 len;
+ 549   5                                              i++;
+ 550   5                                              bNeedReverse = false;   //this line have unicode, could not reverse
+ 551   5                                      }
+ 552   4                              }
+ 553   3                              if(len >= LCD_WIDTH)    //check 1 line
+ 554   3                                      break;
+ 555   3                              i++;
+ 556   3                              c = *(pInfo+i);
+ 557   3                      };
+ 558   2              }
+ 559   1              if(bNeedReverse)
+ 560   1                      return false;
+ 561   1              return true;
+ 562   1      #else
+                      return false;
+              #endif  
+ 565   1      }
+ 566          /***************************************************************************************/
+ 567          #endif  //#ifdef LCD128_64
+
+C51 COMPILATION COMPLETE.  11 WARNING(S),  1 ERROR(S)

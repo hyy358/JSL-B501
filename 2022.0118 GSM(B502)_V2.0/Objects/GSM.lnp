@@ -1,0 +1,20 @@
+".\Objects\STARTUP.obj",
+".\Objects\main.obj",
+".\Objects\Driver.obj",
+".\Objects\LCD12864.obj",
+".\Objects\GSM.obj",
+".\Objects\NameList.obj",
+".\Objects\Eeprom.obj",
+".\Objects\SysStatus.obj",
+".\Objects\UnlockPassword.obj",
+".\Objects\SysString.obj",
+".\Objects\Card.obj",
+".\Objects\CardRead.obj",
+".\Objects\Audio.obj",
+".\Objects\UART.obj",
+".\Objects\timer.obj",
+".\Objects\GPIO.obj",
+".\Objects\Exti.obj",
+".\Objects\spi.obj" 
+TO ".\Objects\GSM" 
+PRINT(".\Listings\GSM.m51") RAMSIZE(256) 

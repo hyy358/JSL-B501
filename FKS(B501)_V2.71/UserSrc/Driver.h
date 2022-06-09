@@ -34,7 +34,8 @@
 #define RELAY_1_ON	{P43 = 1;}
 #define RELAY_1_OFF	{P43 = 0;}
 
-#define RFID_DAT	P32
+#define RFID_DAT0	P32
+#define RFID_DAT1 P35
 
 #define CAMERA_ON	{P42 = 1;}
 #define CAMERA_OFF	{P42 = 0;}

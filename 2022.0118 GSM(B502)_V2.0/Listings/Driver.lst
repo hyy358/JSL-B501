@@ -1,0 +1,492 @@
+C51 COMPILER V9.57.0.0   DRIVER                                                            06/09/2022 11:28:17 PAGE 1   
+
+
+C51 COMPILER V9.57.0.0, COMPILATION OF MODULE DRIVER
+OBJECT MODULE PLACED IN .\Objects\Driver.obj
+COMPILER INVOKED BY: D:\keil-c51\C51\BIN\C51.EXE UserSrc\Driver.c LARGE OPTIMIZE(8,SPEED) BROWSE NOINTPROMOTE INCDIR(.\U
+                    -serSrc;.\StcLib;.\UserSrc\ENG) DEBUG OBJECTEXTEND PRINT(.\Listings\Driver.lst) TABS(2) OBJECT(.\Objects\Driver.obj)
+
+line level    source
+
+   1          #include "config.h"
+   2          #include "Driver.h"
+   3          #include "stdio.h"
+   4          #include "GPIO.h"
+   5          #include "UART.h"
+   6          #include "timer.h"
+   7          #include "Exti.h"
+   8          #include "SysString.h"
+   9          #include "SysStatus.h"
+  10          #include "Audio.h"
+  11          
+  12          uint8_t DtmfData = 0;
+  13          
+  14          void delay(u16 t)
+  15          {
+  16   1        u16 i,j;
+  17   1        t*=7;
+  18   1        for(i=0;i<t;i++)
+  19   1          for(j=0;j<110;j++);
+  20   1      } 
+  21          
+  22          char putchar(char ch)
+  23          {
+  24   1        TX1_write2buff(ch); 
+  25   1        return ch;
+  26   1      }
+  27          uint8_t strlen(uint8_t *pch)
+  28          {
+  29   1        uint8_t len = 0;
+  30   1        while(*pch++)len++;
+  31   1        return len;
+  32   1      }
+  33          uint8_t HBstrlen(uint8_t *pch)
+  34          {
+  35   1        uint8_t len = 0;
+  36   1        while(*pch)
+  37   1        {
+  38   2          len++;
+  39   2          if(*pch == 0xD7)
+  40   2          {
+  41   3            len--;
+  42   3          }
+  43   2          pch++;
+  44   2        }
+  45   1        return len;
+  46   1      }
+  47          
+  48          int lookforstr(uint8_t *srcBuf,uint8_t *detBuf)
+  49          {
+  50   1        int i,j;
+  51   1        i = 0;
+  52   1        j = 0;
+  53   1        while(srcBuf[i])
+  54   1        {
+C51 COMPILER V9.57.0.0   DRIVER                                                            06/09/2022 11:28:17 PAGE 2   
+
+  55   2          if(srcBuf[i] == detBuf[0])
+  56   2          {
+  57   3            for(j=0;detBuf[j];j++)
+  58   3            {
+  59   4              if(srcBuf[i+j] != detBuf[j])
+  60   4              {
+  61   5                break;
+  62   5              }
+  63   4            }
+  64   3            if(detBuf[j] == 0)
+  65   3            {
+  66   4              return i;
+  67   4            }
+  68   3          }
+  69   2          i++;
+  70   2        }
+  71   1        return -1;
+  72   1      }
+  73          
+  74          void ClearBuf(uint8_t *buf,uint16_t len)
+  75          {
+  76   1        while(len--)
+  77   1        {
+  78   2          *buf++ = 0;
+  79   2        }
+  80   1      }
+  81          void HS_memcpy(uint8_t * dst,uint8_t * src,uint16_t len)
+  82          {
+  83   1        while(len--)
+  84   1        {
+  85   2          *dst++ = *src++;
+  86   2        }
+  87   1      }
+  88          uint16_t HS_strcpy(uint8_t * dst,uint8_t * src)
+  89          {
+  90   1        uint16_t i = 0;
+  91   1        while(*src)
+  92   1        {
+  93   2          *dst++ = *src++;
+  94   2          i++;
+  95   2        }
+  96   1        *dst = 0;
+  97   1        return i;
+  98   1      }
+  99          bool MemIsEmpty(uint8_t *buf,uint16_t len)
+ 100          {
+ 101   1        while(len--)
+ 102   1        {
+ 103   2          if(*buf++ != 0)
+ 104   2          {
+ 105   3            return false;
+ 106   3          }
+ 107   2        }
+ 108   1        return true;
+ 109   1      }
+ 110          
+ 111          void GPIO_config(void)
+ 112          {
+ 113   1        GPIO_InitTypeDef  GPIO_InitStructure;   //结构定义
+ 114   1        GPIO_InitStructure.Pin  = GPIO_Pin_All;   //指定要初始化的IO,
+ 115   1        
+ 116   1      //============GPIO_PullUp===========================================================
+C51 COMPILER V9.57.0.0   DRIVER                                                            06/09/2022 11:28:17 PAGE 3   
+
+ 117   1        
+ 118   1        GPIO_InitStructure.Mode = GPIO_PullUp;    //指定IO的输入或输出方式,GPIO_PullUp,GPIO_HighZ,GPIO_OUT_OD,GPIO_
+             -OUT_PP
+ 119   1        GPIO_Inilize(GPIO_P1,&GPIO_InitStructure);  //初始化
+ 120   1      
+ 121   1        GPIO_Inilize(GPIO_P2,&GPIO_InitStructure);
+ 122   1        
+ 123   1        //GPIO_InitStructure.Pin  = GPIO_Pin_2 | GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7;
+ 124   1        GPIO_Inilize(GPIO_P3,&GPIO_InitStructure);
+ 125   1        
+ 126   1        GPIO_InitStructure.Pin  = GPIO_Pin_5 | GPIO_Pin_6;
+ 127   1        GPIO_Inilize(GPIO_P0,&GPIO_InitStructure);
+ 128   1        
+ 129   1        GPIO_InitStructure.Pin  =  GPIO_Pin_0;
+ 130   1        GPIO_Inilize(GPIO_P4,&GPIO_InitStructure);
+ 131   1        
+ 132   1        GPIO_InitStructure.Pin  = GPIO_Pin_4 | GPIO_Pin_5;
+ 133   1        GPIO_Inilize(GPIO_P5,&GPIO_InitStructure);
+ 134   1        
+ 135   1        GPIO_InitStructure.Pin  = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7;
+ 136   1        GPIO_Inilize(GPIO_P6,&GPIO_InitStructure);
+ 137   1        
+ 138   1        GPIO_InitStructure.Pin  = GPIO_Pin_3 | GPIO_Pin_6;
+ 139   1        GPIO_Inilize(GPIO_P7,&GPIO_InitStructure);
+ 140   1        
+ 141   1      //============GPIO_OUT_PP===========================================================
+ 142   1        GPIO_InitStructure.Mode = GPIO_OUT_PP;
+ 143   1        
+ 144   1        GPIO_InitStructure.Pin  = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_4;
+ 145   1        GPIO_Inilize(GPIO_P0,&GPIO_InitStructure);
+ 146   1        
+ 147   1        GPIO_InitStructure.Pin  =  GPIO_Pin_1 | GPIO_Pin_3 | GPIO_Pin_4;
+ 148   1        GPIO_Inilize(GPIO_P4,&GPIO_InitStructure);
+ 149   1        
+ 150   1        GPIO_InitStructure.Pin  = GPIO_Pin_2 | GPIO_Pin_3;
+ 151   1        GPIO_Inilize(GPIO_P5,&GPIO_InitStructure);
+ 152   1        
+ 153   1        GPIO_InitStructure.Pin  = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2  | GPIO_Pin_4  | GPIO_Pin_5;
+ 154   1        GPIO_Inilize(GPIO_P7,&GPIO_InitStructure);
+ 155   1        
+ 156   1        GPIO_InitStructure.Pin  = GPIO_Pin_2;
+ 157   1        GPIO_Inilize(GPIO_P6,&GPIO_InitStructure);
+ 158   1        
+ 159   1        GSM_PWREN_L;
+ 160   1        GSM_PWRKEY_L;
+ 161   1        
+ 162   1        IIC_CLK_H;
+ 163   1        IIC_DAT_H;
+ 164   1        IIC_WP_H;
+ 165   1        
+ 166   1        RELAY_1_OFF;
+ 167   1        RELAY_2_OFF;
+ 168   1        
+ 169   1      //  RFID_SHD_L;
+ 170   1      }
+ 171          
+ 172          void UART_config(void)
+ 173          {
+ 174   1        COMx_InitDefine   COMx_InitStructure;         //结构定义
+ 175   1        COMx_InitStructure.UART_Mode      = UART_8bit_BRTx; //模式, UART_ShiftRight,UART_8bit_BRTx,UART_9bit,UART
+             -_9bit_BRTx
+ 176   1        COMx_InitStructure.UART_BRT_Use   = BRT_Timer2;     //使用波特率, BRT_Timer1, BRT_Timer2 (注意: 串口2固定使
+C51 COMPILER V9.57.0.0   DRIVER                                                            06/09/2022 11:28:17 PAGE 4   
+
+             -用BRT_Timer2)
+ 177   1        COMx_InitStructure.UART_BaudRate  = 115200ul;     //波特率, 一般 110 ~ 115200
+ 178   1        COMx_InitStructure.UART_RxEnable  = ENABLE;       //接收允许,   ENABLE或DISABLE
+ 179   1        COMx_InitStructure.BaudRateDouble = DISABLE;      //波特率加倍, ENABLE或DISABLE
+ 180   1        COMx_InitStructure.UART_Interrupt = ENABLE;       //中断允许,   ENABLE或DISABLE
+ 181   1        COMx_InitStructure.UART_Polity    = Polity_1;     //指定中断优先级(低到高) Polity_0,Polity_1,Polity_2,Polit
+             -y_3
+ 182   1        COMx_InitStructure.UART_P_SW      = UART1_SW_P30_P31; //切换端口,   UART1_SW_P30_P31,UART1_SW_P36_P37,UAR
+             -T1_SW_P16_P17,UART1_SW_P43_P44
+ 183   1        UART_Configuration(UART1, &COMx_InitStructure);   //初始化串口1 UART1,UART2,UART3,UART4
+ 184   1        printf("UART1_config OK!\r\n"); //UART1发送一个字符串
+ 185   1      
+ 186   1      #ifdef UART3  
+ 187   1        COMx_InitStructure.UART_P_SW      = UART3_SW_P50_P51; //切换端口
+ 188   1        UART_Configuration(UART3, &COMx_InitStructure);   //初始化串口 UART1,UART2,UART3,UART4
+ 189   1        TX3_write2buff('X');
+ 190   1        printf("UART3_config OK!\r\n");
+ 191   1      #endif
+ 192   1        
+ 193   1      #ifdef UART4  
+                COMx_InitStructure.UART_BRT_Use   = BRT_Timer4; 
+                COMx_InitStructure.UART_BaudRate  = 9600ul;
+                COMx_InitStructure.UART_P_SW      = UART4_SW_P02_P03; //切换端口
+                UART_Configuration(UART4, &COMx_InitStructure);   //初始化串口 UART1,UART2,UART3,UART4
+                TX4_write2buff('X');
+                printf("UART4_config OK!\r\n");
+              #endif
+ 201   1      }
+ 202          
+ 203          void Timer_config(void)
+ 204          {
+ 205   1        TIM_InitTypeDef   TIM_InitStructure;            //结构定义
+ 206   1        TIM_InitStructure.TIM_Mode      = TIM_16BitAutoReload;  //指定工作模式,   TIM_16BitAutoReload,TIM_16Bit,TI
+             -M_8BitAutoReload,TIM_16BitAutoReloadNoMask
+ 207   1        TIM_InitStructure.TIM_Polity    = Polity_0;     //指定中断优先级(低到高) Polity_0,Polity_1,Polity_2,Polity_
+             -3
+ 208   1        TIM_InitStructure.TIM_Interrupt = ENABLE;         //中断是否允许,   ENABLE或DISABLE
+ 209   1        TIM_InitStructure.TIM_ClkSource = TIM_CLOCK_1T;   //指定时钟源,     TIM_CLOCK_1T,TIM_CLOCK_12T,TIM_CLOCK_E
+             -xt
+ 210   1        TIM_InitStructure.TIM_ClkOut    = DISABLE;        //是否输出高速脉冲, ENABLE或DISABLE
+ 211   1        TIM_InitStructure.TIM_Value     = 65536UL - (MAIN_Fosc / 1000);   //初值,
+ 212   1        TIM_InitStructure.TIM_Run       = ENABLE;         //是否初始化后启动定时器, ENABLE或DISABLE
+ 213   1      
+ 214   1        Timer_Inilize(Timer0,&TIM_InitStructure);         //初始化Timer0    Timer0,Timer1,Timer2,Timer3,Timer4
+ 215   1        
+ 216   1        TIM_InitStructure.TIM_Value     = 65536UL - (MAIN_Fosc / 100000);   //初值,
+ 217   1        Timer_Inilize(Timer1,&TIM_InitStructure);         //初始化Timer1    Timer0,Timer1,Timer2,Timer3,Timer4
+ 218   1      #ifdef PWM_AUDIO  
+ 219   1        TIM_InitStructure.TIM_Value     = 65536UL - (MAIN_Fosc / 32000);    //初值,
+ 220   1        Timer_Inilize(Timer4,&TIM_InitStructure);
+ 221   1      #endif
+ 222   1      }
+ 223          
+ 224          void Exti_config(void)
+ 225          {
+ 226   1        EXTI_InitTypeDef  Exti_InitStructure;             //结构定义
+ 227   1      
+ 228   1        Exti_InitStructure.EXTI_Interrupt = ENABLE;       //中断使能,   ENABLE或DISABLE
+ 229   1        Exti_InitStructure.EXTI_Polity    = Polity_0;     //指定中断优先级(低到高) Polity_0,Polity_1,Polity_2,Polit
+             -y_3
+ 230   1        Exti_InitStructure.EXTI_Mode      = EXT_MODE_RiseFall;//中断模式,   EXT_MODE_RiseFall,EXT_MODE_Fall
+ 231   1        Ext_Inilize(EXT_INT0,&Exti_InitStructure);        //初始化
+C51 COMPILER V9.57.0.0   DRIVER                                                            06/09/2022 11:28:17 PAGE 5   
+
+ 232   1      #ifdef EXT_INT1
+                Exti_InitStructure.EXTI_Mode      = EXT_MODE_Fall;//中断模式,   EXT_MODE_RiseFall,EXT_MODE_Fall
+                Ext_Inilize(EXT_INT1,&Exti_InitStructure);        //初始化
+              #endif
+ 236   1      }
+ 237          
+ 238          uint8_t KeyScan(void)
+ 239          {
+ 240   1        static uint8_t KeyStep = 0;
+ 241   1        static uint8_t KeyTime = 0;
+ 242   1        uint8_t key;
+ 243   1        switch(KeyStep)
+ 244   1        {
+ 245   2          case 0:
+ 246   2            KEY_P = 0xF0;
+ 247   2            if((KEY_P&0xF0) != 0xF0)
+ 248   2            {
+ 249   3              KeyTime = 20;
+ 250   3              KeyStep = 1;
+ 251   3            }
+ 252   2            break;
+ 253   2          case 1:
+ 254   2            if((KEY_P&0xF0) == 0xF0)
+ 255   2            {
+ 256   3              KeyStep = 0;
+ 257   3            }
+ 258   2            else if(--KeyTime == 0)
+ 259   2            {
+ 260   3              KeyStep = 2;
+ 261   3            }
+ 262   2            break;
+ 263   2          case 2:
+ 264   2            key = KEY_P | 0x0F;
+ 265   2            KEY_P = key;
+ 266   2            KeyStep = 3;
+ 267   2            break;
+ 268   2          case 3:
+ 269   2            key = KEY_P;
+ 270   2            KEY_P = 0xF0;
+ 271   2            KeyStep = 4;
+ 272   2            switch(key)
+ 273   2            {
+ 274   3              case 0xEE:
+ 275   3                return 4;
+ 276   3              case 0xED:
+ 277   3                return 8;
+ 278   3              case 0xEB:
+ 279   3                return 11;
+ 280   3              case 0xE7:
+ 281   3                return 15;
+ 282   3              case 0xDE:
+ 283   3                return 3;
+ 284   3              case 0xDD:
+ 285   3                return 7;
+ 286   3              case 0xDB:
+ 287   3                return 0;
+ 288   3              case 0xD7:
+ 289   3                return 14;
+ 290   3              case 0xBE:
+ 291   3                return 2;
+ 292   3              case 0xBD:
+ 293   3                return 6;
+C51 COMPILER V9.57.0.0   DRIVER                                                            06/09/2022 11:28:17 PAGE 6   
+
+ 294   3              case 0xBB:
+ 295   3                return 10;
+ 296   3              case 0xB7:
+ 297   3                return 13;
+ 298   3              case 0x7E:
+ 299   3                return 1;
+ 300   3              case 0x7D:
+ 301   3                return 5;
+ 302   3              case 0x7B:
+ 303   3                return 9;
+ 304   3              case 0x77:
+ 305   3                return 12;
+ 306   3            }
+ 307   2            break;
+ 308   2          case 4:
+ 309   2            if((KEY_P&0xF0) == 0xF0)
+ 310   2            {
+ 311   3              KeyStep = 5;
+ 312   3              KeyTime = 20;
+ 313   3            }
+ 314   2            break;
+ 315   2          case 5:
+ 316   2            if((KEY_P&0xF0) != 0xF0)
+ 317   2            {
+ 318   3              KeyStep = 4;
+ 319   3            }
+ 320   2            else if(--KeyTime == 0)
+ 321   2            {
+ 322   3              KeyStep = 0;
+ 323   3            }
+ 324   2            break;
+ 325   2                
+ 326   2        }
+ 327   1        return 0xFF;
+ 328   1      }
+ 329          
+ 330          uint8_t SkeyStatus = 0x1F;
+ 331          uint8_t SkeyStatusOld = 0x1F;
+ 332          uint16_t ResetKeyTime = 0;
+ 333          void SkeyScan(void)
+ 334          {
+ 335   1        static uint8_t SkeyStep = 0;
+ 336   1        static uint8_t SkeyTime = 0;
+ 337   1        
+ 338   1        uint8_t key = 0;
+ 339   1        switch(SkeyStep)
+ 340   1        {
+ 341   2          case 0:
+ 342   2            key = K_MAG;key<<=1;
+ 343   2            key |= K_DET;key<<=1;
+ 344   2            key |= K_RESET;key<<=1;
+ 345   2            key |= K_REX2;key<<=1;
+ 346   2            key |= K_REX1;
+ 347   2          
+ 348   2            if(key != SkeyStatus)
+ 349   2            {
+ 350   3              SkeyTime = 30;
+ 351   3              SkeyStep = 1;
+ 352   3            }
+ 353   2            break;
+ 354   2          case 1:
+ 355   2            key = K_MAG;key<<=1;
+C51 COMPILER V9.57.0.0   DRIVER                                                            06/09/2022 11:28:17 PAGE 7   
+
+ 356   2            key |= K_DET;key<<=1;
+ 357   2            key |= K_RESET;key<<=1;
+ 358   2            key |= K_REX2;key<<=1;
+ 359   2            key |= K_REX1;
+ 360   2          
+ 361   2            if(key == SkeyStatus)
+ 362   2            {
+ 363   3              SkeyStep = 0;
+ 364   3            }
+ 365   2            else if(--SkeyTime == 0)
+ 366   2            {
+ 367   3              SkeyStep = 0;
+ 368   3              SkeyStatus = key;
+ 369   3            }
+ 370   2            break;
+ 371   2                
+ 372   2        }
+ 373   1        if(SkeyStatusOld != SkeyStatus)
+ 374   1        {
+ 375   2          
+ 376   2          if(((SkeyStatus & 0x01) != (SkeyStatusOld&0x01)) && ((SkeyStatus & 0x01) == 0))//K_REX1
+ 377   2          {
+ 378   3            Unlock(0,SysPara.RealyTime,false);
+ 379   3            IdleTime = 5;
+ 380   3          }
+ 381   2          if(((SkeyStatus & 0x02) != (SkeyStatusOld&0x02)) && ((SkeyStatus & 0x02) == 0))//K_REX2
+ 382   2          {
+ 383   3            Unlock(1,SysPara.RealyTime,false);
+ 384   3            IdleTime = 5;
+ 385   3          }
+ 386   2          if((SkeyStatus & 0x04) != (SkeyStatusOld&0x04))//K_RESET
+ 387   2          {
+ 388   3            ResetKeyTime = 10000;
+ 389   3            printf("ResetKeyTime\r\n");
+ 390   3          }
+ 391   2          if((SkeyStatus & 0x08) != (SkeyStatusOld&0x08))//K_DET
+ 392   2          {
+ 393   3            
+ 394   3          }
+ 395   2          if((SkeyStatus & 0x10) != (SkeyStatusOld&0x10))//K_MAG
+ 396   2          {
+ 397   3            
+ 398   3          }
+ 399   2          SkeyStatusOld = SkeyStatus;
+ 400   2        }
+ 401   1        if((SkeyStatusOld&0x04) == 0)
+ 402   1        {
+ 403   2          if(ResetKeyTime)
+ 404   2          {
+ 405   3            if(--ResetKeyTime == 0)
+ 406   3            {
+ 407   4              InitSysPara(true);
+ 408   4              ShowReset();
+ 409   4              IdleTime = 5;
+ 410   4            }
+ 411   3          }
+ 412   2        }
+ 413   1      }
+ 414          
+ 415          uint8_t Rly1Time[2] = {0,0};
+ 416          void Unlock(uint8_t idx,uint8_t time,bool sound)
+ 417          {
+C51 COMPILER V9.57.0.0   DRIVER                                                            06/09/2022 11:28:17 PAGE 8   
+
+ 418   1        Rly1Time[idx] = time;
+ 419   1        if(idx == 0)
+ 420   1        {
+ 421   2          RELAY_1_ON;
+ 422   2        }
+ 423   1        else if(idx == 1)
+ 424   1        {
+ 425   2          RELAY_2_ON;
+ 426   2        }
+ 427   1        ShowUnlock(sound);
+ 428   1      }
+ 429          void RelayTask(void)//1sec
+ 430          {
+ 431   1        if(Rly1Time[0] != 0)
+ 432   1        {
+ 433   2          if(--Rly1Time[0] == 0)
+ 434   2          {
+ 435   3            RELAY_1_OFF;
+ 436   3          }
+ 437   2        }
+ 438   1        if(Rly1Time[1] != 0)
+ 439   1        {
+ 440   2          if(--Rly1Time[1] == 0)
+ 441   2          {
+ 442   3            RELAY_2_OFF;
+ 443   3          }
+ 444   2        }
+ 445   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1695    ----
+   CONSTANT SIZE    =     53    ----
+   XDATA SIZE       =     11      60
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

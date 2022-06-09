@@ -41,7 +41,7 @@ void main(void)
 	delay(100);
 	WDT_config();
 	SysIdleCon();
-	CardReadInit();
+//	CardReadInit();
 #ifdef PWM_BEEP
 //#if 1	//(defined(PWM_BEEP) || defined(KEY_BEEP))
 	MP3_StartPlay(MP3_SetOK);
@@ -161,7 +161,11 @@ void main(void)
 		
 		if(CardReadOK)
 		{
-			CheckRfidCard();
+			//CheckRfidCard();
+			//WG_Send26(WG);
+			WGOK();
+			printf("WG26\n");
+			
 			if(CardGetOk)
 			{
 				#ifdef KEY_BEEP

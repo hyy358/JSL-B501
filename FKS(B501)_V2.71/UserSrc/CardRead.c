@@ -2,7 +2,7 @@
 #include "RfidCard.h"
 #include "stdio.h"
 
-
+uint8_t Cnt = 0;
 uint8_t CardRt = 0;
 uint8_t CardGetBit = 0;
 uint8_t CardBitCount = 0;
@@ -18,6 +18,10 @@ uint8_t CodeCheckTs = 0;
 uint32_t CodeIn = 0;
 uint16_t CardInTime = 1000;
 uint16_t CardRaw[20];
+
+uint8_t WG[26];
+uint8_t WGstr[3];
+
 void CardReadInit(void)
 {
 	CardRt = 0;
@@ -44,7 +48,92 @@ void CardMsTask(void)
 
 
 bool errflg = false;
-void CheckRfidCard(void)
+
+void WG_Send26(uint8_t *str)  //把26位韦根数据转换为3字节数据存储
+{
+
+	uint8_t Even = 0; //偶检验
+	uint8_t Odd = 0; //奇检验
+	uint8_t k;
+	uint8_t CheakEven = 0;
+	uint8_t CheakOdd = 1;
+	for(k=0;k<26;k++)
+	{
+		if(k<=0)  //读偶检验位
+		{
+			if(str[k]==0)
+					Even=0;
+				else
+					Even=1;
+		}
+		if(k>=25) //读奇检验位
+			{
+				if(str[k]==0)
+					Odd=0;
+				else
+					Odd=1;
+			}
+			
+			if(k<=8)  //读HID码低8位
+			{
+				if(str[k]==0x00)
+					WGstr[0]|=0x00;
+				else
+				{
+					WGstr[0]|=0x01;
+					CheakEven= ~CheakEven;	 //	根据HID码低8位1的个数来确定偶检验位是1还是0
+				}
+				if(k<8)
+				WGstr[0]=WGstr[0]<<1;
+			}
+			if(k<=16)  //读PID码高8位
+			{
+				if(str[k]==0x00)
+					WGstr[1]|=0x00;
+				else
+				{
+					WGstr[1]|=0x01;
+					CheakOdd=~CheakOdd;	////	根据PID码高8位1的个数来确定奇检验位是1还是0
+				}
+				if(k<16)
+				WGstr[1]=WGstr[1]<<1;
+			}
+			else		 //读PID码的低8位
+			{
+				if(str[k]==0x00)
+					WGstr[2]|=0x00;
+				else
+				{
+					WGstr[2]|=0x01;
+					CheakOdd=~CheakOdd;	 //	根据PID码低8位1的个数来确定奇检验位是1还是0
+				}
+				if(k<24)
+				WGstr[2]=WGstr[2]<<1;
+			}
+				
+	}
+
+}
+
+//void DATA0(void)
+//{
+//			WG[Cnt]=0x00;
+//			Cnt++;
+//}
+
+//void DATA1(void)
+//{
+//			WG[Cnt]=0x01;
+//			Cnt++;
+//}
+
+void WGOK(void)
+{
+	
+	WG_Send26(WG);
+}
+
+void CheckRfidCard(void)   
 {
 	uint8_t i,n,k;
 	uint8_t j = 0;
@@ -105,7 +194,6 @@ void CheckRfidCard(void)
 		RfidCardBuf[8] = (CardRaw[2] >> 3)&0x1F;
 		RfidCardBuf[9] = (CardRaw[2] << 2)&0x1F;
 		RfidCardBuf[9] |= (CardRaw[2] >> 14)&0x0F;
-
 
 		for(i=0;i<CARD_BUF_LEN;i++)
 		{
@@ -190,8 +278,8 @@ void CardIrq(void)
 	if((CardRt >= CARD_TL_MIN) && (CardRt <= CARD_TL_MAX))
 	{
 		CardGetBit++;
-		if(((CardGetBit == 1) && (RFID_DAT == 0))
-			|| ((CardGetBit == 2) && (RFID_DAT == 1)))
+		if(((CardGetBit == 1) && (RFID_DAT0 == 0))
+			|| ((CardGetBit == 2) && (RFID_DAT0 == 1)))
 		{
 			CardGetBit = 0;
 			CardBitCount = 0;
@@ -201,7 +289,7 @@ void CardIrq(void)
 		if((CardGetBit > CARD_LEN) && (CardGetBit%2) == 1)//位跳变
 		{
 			CardCh <<= 1;
-			if(RFID_DAT == 0)//上升沿为1
+			if(RFID_DAT0 == 0)//上升沿为1
 			{
 				CardCh |= 0x01;
 			}
@@ -229,7 +317,7 @@ void CardIrq(void)
 		if((CardGetBit%2) == 1)//位跳变
 		{
 			CardCh <<= 1;
-			if(RFID_DAT == 0)//上升沿为1
+			if(RFID_DAT0 == 0)//上升沿为1
 			{
 				CardCh |= 0x01;
 			}

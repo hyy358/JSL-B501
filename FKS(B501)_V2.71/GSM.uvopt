@@ -103,7 +103,7 @@
         <bEvRecOn>1</bEvRecOn>
         <bSchkAxf>0</bSchkAxf>
         <bTchkAxf>0</bTchkAxf>
-        <nTsel>12</nTsel>
+        <nTsel>10</nTsel>
         <sDll></sDll>
         <sDllPa></sDllPa>
         <sDlgDll></sDlgDll>
@@ -233,7 +233,7 @@
       <GroupNumber>1</GroupNumber>
       <FileNumber>2</FileNumber>
       <FileType>1</FileType>
-      <tvExp>0</tvExp>
+      <tvExp>1</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
       <PathWithFileName>.\UserSrc\main.c</PathWithFileName>
@@ -344,8 +344,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>.\UserSrc\CardRead.c</PathWithFileName>
-      <FilenameWithoutPath>CardRead.c</FilenameWithoutPath>
+      <PathWithFileName>.\UserSrc\Audio.c</PathWithFileName>
+      <FilenameWithoutPath>Audio.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
@@ -356,8 +356,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>.\UserSrc\Audio.c</PathWithFileName>
-      <FilenameWithoutPath>Audio.c</FilenameWithoutPath>
+      <PathWithFileName>.\UserSrc\CardRead.c</PathWithFileName>
+      <FilenameWithoutPath>CardRead.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
@@ -436,7 +436,7 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\FKS(B501)_V2.31\StcLib\WDT.c</PathWithFileName>
+      <PathWithFileName>.\StcLib\WDT.c</PathWithFileName>
       <FilenameWithoutPath>WDT.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>

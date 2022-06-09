@@ -1,10 +1,11 @@
-C51 COMPILER V9.60.0.0   SYSSTRING                                                         11/01/2021 15:13:58 PAGE 1   
+C51 COMPILER V9.57.0.0   SYSSTRING                                                         06/06/2022 10:51:45 PAGE 1   
 
 
-C51 COMPILER V9.60.0.0, COMPILATION OF MODULE SYSSTRING
+C51 COMPILER V9.57.0.0, COMPILATION OF MODULE SYSSTRING
 OBJECT MODULE PLACED IN .\Objects\SysString.obj
-COMPILER INVOKED BY: D:\Keil_v5\C51\BIN\C51.EXE UserSrc\SysString.c LARGE OPTIMIZE(8,SPEED) BROWSE NOINTPROMOTE INCDIR(.
-                    -\UserSrc;.\StcLib;.\UserSrc\ENG) DEBUG OBJECTEXTEND PRINT(.\Listings\SysString.lst) OBJECT(.\Objects\SysString.obj)
+COMPILER INVOKED BY: D:\keil-c51\C51\BIN\C51.EXE UserSrc\SysString.c LARGE OPTIMIZE(8,SPEED) BROWSE NOINTPROMOTE INCDIR(
+                    -.\UserSrc;.\StcLib;.\UserSrc\ENG) DEBUG OBJECTEXTEND PRINT(.\Listings\SysString.lst) TABS(2) OBJECT(.\Objects\SysString.
+                    -obj)
 
 line level    source
 
@@ -61,9 +62,9 @@ line level    source
               
               code char StrTabUnlockKey[] = {"UnlockKey:"};
               
-              code char StrTabOn[] = {"on"};
-C51 COMPILER V9.60.0.0   SYSSTRING                                                         11/01/2021 15:13:58 PAGE 2   
+C51 COMPILER V9.57.0.0   SYSSTRING                                                         06/06/2022 10:51:45 PAGE 2   
 
+              code char StrTabOn[] = {"on"};
               code char StrTabOff[] = {"off"};
               
               code char StrTabGsmErr[] = {"  Gsm Err!"};
@@ -125,9 +126,9 @@ line level    source
  113          code char StrTabTone[] = {"הנחיות קוליות:"};
  114          code char StrTabCamrea[] = {"מצלמה:"};
  115          code char StrTabRelay[] = {"זמן ממסר:"};
- 116          code char StrTabUnlockKey[] = {"מקש פ.דלת:"};
-C51 COMPILER V9.60.0.0   SYSSTRING                                                         11/01/2021 15:13:58 PAGE 3   
+C51 COMPILER V9.57.0.0   SYSSTRING                                                         06/06/2022 10:51:45 PAGE 3   
 
+ 116          code char StrTabUnlockKey[] = {"מקש פ.דלת:"};
  117          code char StrTabTalkValum[] = {"עוצמת דיבור"};
  118          
  119          code char StrTabOn[] = {"פעיל"};
@@ -160,139 +161,139 @@ line level    source
  146          
  147          void ShowConfirmSave(void)
  148          {
- 149   1              LcdClear();
- 150   1              DisplayString(1,0,StrTabMakeSure);
+ 149   1        LcdClear();
+ 150   1        DisplayString(1,0,StrTabMakeSure);
  151   1      }
  152          void ShowConfirmDel(void)
  153          {
- 154   1              LcdClear();
- 155   1              DisplayString(1,0,StrTabDel);
+ 154   1        LcdClear();
+ 155   1        DisplayString(1,0,StrTabDel);
  156   1      }
  157          void ShowSaveOK(void)
  158          {
- 159   1              LcdClear();
- 160   1              DisplayString(1,0,StrTabSaveOK);
- 161   1              MP3_StartPlay(MP3_SetOK);
+ 159   1        LcdClear();
+ 160   1        DisplayString(1,0,StrTabSaveOK);
+ 161   1        MP3_StartPlay(MP3_SetOK);
  162   1      }
  163          void ShowErr(void)
  164          {
- 165   1              LcdClear();
- 166   1              DisplayString(1,0,StrTabErr);
+ 165   1        LcdClear();
+ 166   1        DisplayString(1,0,StrTabErr);
  167   1      }
  168          void ShowDeleteOK(void)
  169          {
- 170   1              LcdClear();
- 171   1              DisplayString(1,0,StrTabDelOK);
+ 170   1        LcdClear();
+ 171   1        DisplayString(1,0,StrTabDelOK);
  172   1      }
  173          
  174          void ShowCardErr(void)
  175          {
- 176   1              LcdClear();
- 177   1              DisplayString(1,0,StrTabCardErr);
- 178   1              MP3_StartPlay(MP3_CardErr);
-C51 COMPILER V9.60.0.0   SYSSTRING                                                         11/01/2021 15:13:58 PAGE 4   
+ 176   1        LcdClear();
+ 177   1        DisplayString(1,0,StrTabCardErr);
+C51 COMPILER V9.57.0.0   SYSSTRING                                                         06/06/2022 10:51:45 PAGE 4   
 
+ 178   1        MP3_StartPlay(MP3_CardErr);
  179   1      }
  180          void ShowUnlock(bool Sound)
  181          {
- 182   1              LcdClear();
- 183   1              DisplayString(1,0,StrTabUnlock);
- 184   1              if(Sound)
- 185   1              {
- 186   2                      MP3_StartPlay(MP3_Unlock);
- 187   2              }
+ 182   1        LcdClear();
+ 183   1        DisplayString(1,0,StrTabUnlock);
+ 184   1        if(Sound)
+ 185   1        {
+ 186   2          MP3_StartPlay(MP3_Unlock);
+ 187   2        }
  188   1      }
  189          
  190          //void ShowGsmErr(void)
  191          //{
- 192          //      LcdClear();
- 193          //      DisplayString(1,0,StrTabGsmErr);
+ 192          //  LcdClear();
+ 193          //  DisplayString(1,0,StrTabGsmErr);
  194          //}
  195          
  196          void ShowRoomErr(void)
  197          {
- 198   1              LcdClear();
- 199   1              DisplayString(1,0,StrTabRoomErr);
+ 198   1        LcdClear();
+ 199   1        DisplayString(1,0,StrTabRoomErr);
  200   1      }
  201          
  202          void ShowGsmCsq(void)
  203          {
- 204   1      //      if((GsmCsq == 0xff) || (GsmCsq < 5))
- 205   1      //      {
- 206   1      //              //DisplayString(0,0,StrTabGsmCsqErr);
- 207   1      //              DisplayCsq(0,0,0);
- 208   1      //              DisplayIco(0,1,6);
- 209   1      //              return;
- 210   1      //      }
- 211   1      //      DisplayCsq(0,0,GsmCsq);
+ 204   1      //  if((GsmCsq == 0xff) || (GsmCsq < 5))
+ 205   1      //  {
+ 206   1      //    //DisplayString(0,0,StrTabGsmCsqErr);
+ 207   1      //    DisplayCsq(0,0,0);
+ 208   1      //    DisplayIco(0,1,6);
+ 209   1      //    return;
+ 210   1      //  }
+ 211   1      //  DisplayCsq(0,0,GsmCsq);
  212   1      }
  213          
  214          void ShowMain(u8 first)
  215          {
- 216   1              LcdClear();
- 217   1              ShowGsmCsq();
- 218   1      #ifdef LANGUAGE_HB              
- 219   1              if(first == 0)
- 220   1              {
- 221   2                      DisplayString(0,0,StrTabMainA1);
- 222   2                      DisplayString(1,0,StrTabMainA2);
- 223   2                      DisplayString(2,0,StrTabMainA3);
- 224   2                      DisplayIco(2,0,2);
- 225   2                      DisplayString(3,0,StrTabMainA4);
- 226   2                      DisplayIco(3,3,8);
- 227   2              }
- 228   1              else
- 229   1              {
- 230   2                      DisplayString(0,0,StrTabMain1);
- 231   2                      DisplayIco(0,2,0);
- 232   2                      DisplayIco(0,3,1);
- 233   2                      
- 234   2                      DisplayString(1,0,StrTabMain2);
- 235   2                      DisplayIco(1,0,2);
- 236   2                      
- 237   2                      DisplayString(2,0,StrTabMain3);
- 238   2                      
- 239   2                      DisplayString(3,0,StrTabMain4);
- 240   2                      DisplayIco(3,10,3);
-C51 COMPILER V9.60.0.0   SYSSTRING                                                         11/01/2021 15:13:58 PAGE 5   
+ 216   1        LcdClear();
+ 217   1        ShowGsmCsq();
+ 218   1      #ifdef LANGUAGE_HB    
+ 219   1        if(first == 0)
+ 220   1        {
+ 221   2          DisplayString(0,0,StrTabMainA1);
+ 222   2          DisplayString(1,0,StrTabMainA2);
+ 223   2          DisplayString(2,0,StrTabMainA3);
+ 224   2          DisplayIco(2,0,2);
+ 225   2          DisplayString(3,0,StrTabMainA4);
+ 226   2          DisplayIco(3,3,8);
+ 227   2        }
+ 228   1        else
+ 229   1        {
+ 230   2          DisplayString(0,0,StrTabMain1);
+ 231   2          DisplayIco(0,2,0);
+ 232   2          DisplayIco(0,3,1);
+ 233   2          
+ 234   2          DisplayString(1,0,StrTabMain2);
+ 235   2          DisplayIco(1,0,2);
+ 236   2          
+ 237   2          DisplayString(2,0,StrTabMain3);
+ 238   2          
+ 239   2          DisplayString(3,0,StrTabMain4);
+C51 COMPILER V9.57.0.0   SYSSTRING                                                         06/06/2022 10:51:45 PAGE 5   
 
- 241   2              }
+ 240   2          DisplayIco(3,10,3);
+ 241   2        }
  242   1      #endif
- 243   1      #ifdef LANGUAGE_EN              
-                      DisplayString(0,5,StrTabMain1);
-                      DisplayIco(0,2,0);
-                      DisplayIco(0,3,1);
-                      
-                      DisplayString(1,4,StrTabMain2);
-                      DisplayIco(1,2,2);
-                      
-                      
-                      DisplayString(2,0,StrTabMain3);
-                      DisplayIco(2,5,2);
-                      
-                      DisplayString(3,3,StrTabMain4);
-                      DisplayIco(3,1,3);
+ 243   1      #ifdef LANGUAGE_EN    
+                DisplayString(0,5,StrTabMain1);
+                DisplayIco(0,2,0);
+                DisplayIco(0,3,1);
+                
+                DisplayString(1,4,StrTabMain2);
+                DisplayIco(1,2,2);
+                
+                
+                DisplayString(2,0,StrTabMain3);
+                DisplayIco(2,5,2);
+                
+                DisplayString(3,3,StrTabMain4);
+                DisplayIco(3,1,3);
               
-                      
+                
               #endif
  260   1      }
  261          
  262          void ShowTalkTime(void)
  263          {
- 264   1              LcdClear();
+ 264   1        LcdClear();
  265   1      #ifdef LANGUAGE_HB
- 266   1              DisplayString(1,0,StrTabTalk);
- 267   1              sprintf(DisBuf,"%u",CallOutTime);
- 268   1              DisplayString(1,8,DisBuf);
+ 266   1        DisplayString(1,0,StrTabTalk);
+ 267   1        sprintf(DisBuf,"%u",CallOutTime);
+ 268   1        DisplayString(1,8,DisBuf);
  269   1      #else
-                      sprintf(DisBuf,"%s%u",StrTabTalk,CallOutTime);
-                      DisplayString(1,0,DisBuf);
+                sprintf(DisBuf,"%s%u",StrTabTalk,CallOutTime);
+                DisplayString(1,0,DisBuf);
               #endif
  273   1      }
  274          void ShowReset(void)
  275          {
- 276   1              LcdClear();
- 277   1              DisplayString(1,0,StrTabReset);
+ 276   1        LcdClear();
+ 277   1        DisplayString(1,0,StrTabReset);
  278   1      }
 
 

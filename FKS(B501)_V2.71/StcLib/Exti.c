@@ -8,6 +8,8 @@
 void Ext_INT0 (void) interrupt INT0_VECTOR		//进中断时已经清除标志
 {
 	//IrqUpSource |= 0x01;
+//	DATA0();
+//	DATA1();	
 	CardIrq();
 	CardRt = 0;
 }

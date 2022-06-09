@@ -1,0 +1,402 @@
+C51 COMPILER V9.57.0.0   LCD12864                                                          06/09/2022 11:28:17 PAGE 1   
+
+
+C51 COMPILER V9.57.0.0, COMPILATION OF MODULE LCD12864
+OBJECT MODULE PLACED IN .\Objects\LCD12864.obj
+COMPILER INVOKED BY: D:\keil-c51\C51\BIN\C51.EXE UserSrc\LCD12864.c LARGE OPTIMIZE(8,SPEED) BROWSE NOINTPROMOTE INCDIR(.
+                    -\UserSrc;.\StcLib;.\UserSrc\ENG) DEBUG OBJECTEXTEND PRINT(.\Listings\LCD12864.lst) TABS(2) OBJECT(.\Objects\LCD12864.obj
+                    -)
+
+line level    source
+
+   1          #include "Lcd12864.h"
+   2          #include "Driver.h"
+   3          #include "Audio.h"
+   4          
+   5          #define delayNOP(); {_nop_();_nop_();};
+   6          
+   7          
+   8          bool lcd_busy()
+   9          {                          
+  10   1        bool result;
+  11   1      
+  12   1        LCD12864_DATA = 0xFF;
+  13   1        LCD12864_RS_L;
+  14   1        LCD12864_WR_H;
+  15   1        LCD12864_E_H;
+  16   1        delayNOP();
+  17   1        result = (LCD12864_DATA&0x80)==0x80?true:false;
+  18   1        LCD12864_E_L;delayNOP();
+  19   1        
+  20   1        return(result); 
+  21   1      }
+  22          /*
+  23          * 功  能：写指令到LCD
+  24          * 参  数：要写入的指令
+  25          * 返回值：无
+  26          */
+  27          void lcd_wcmd(uint8_t cmd)
+  28          {                          
+  29   1        while(lcd_busy());
+  30   1      
+  31   1        LCD12864_RS_L;
+  32   1        LCD12864_WR_L;
+  33   1        LCD12864_E_L;
+  34   1        _nop_();
+  35   1        _nop_(); 
+  36   1        LCD12864_DATA = cmd;
+  37   1        delayNOP();
+  38   1      //  delayNOP();
+  39   1        LCD12864_E_H;
+  40   1        delayNOP();
+  41   1        LCD12864_E_L;  
+  42   1      }
+  43          
+  44          /*
+  45          * 功  能：LCD写数据
+  46          * 参  数：要写入的数据
+  47          * 返回值：无
+  48          */
+  49          void lcd_wdat(uint8_t dat)
+  50          {                          
+  51   1        while(lcd_busy());
+  52   1      
+  53   1        LCD12864_RS_H;
+C51 COMPILER V9.57.0.0   LCD12864                                                          06/09/2022 11:28:17 PAGE 2   
+
+  54   1        LCD12864_WR_L;
+  55   1        LCD12864_E_L;
+  56   1        LCD12864_DATA = dat;
+  57   1        delayNOP();
+  58   1      //  delayNOP();
+  59   1        LCD12864_E_H;
+  60   1        delayNOP();
+  61   1        LCD12864_E_L; 
+  62   1      }
+  63          void Init_12864(void)
+  64          { 
+  65   1        LCD12864_E_L;
+  66   1        
+  67   1        lcd_wcmd(0x30);      //基本指令操作
+  68   1        //lcd_wcmd(0x34);      //扩充指令操作
+  69   1        delayNOP();
+  70   1        lcd_wcmd(0x30);      //基本指令操作
+  71   1        delayNOP();
+  72   1        lcd_wcmd(0x0C);      //显示开，关光标
+  73   1        delayNOP();
+  74   1        lcd_wcmd(0x01);      //清除LCD的显示内容
+  75   1        delayNOP();
+  76   1        lcd_wcmd(0x06);      //清除LCD的显示内容
+  77   1        delayNOP();
+  78   1      }
+  79          
+  80          void LcdClear(void)
+  81          {
+  82   1        lcd_wcmd(0x01);
+  83   1        delayNOP();
+  84   1      #ifdef GRAPHIC_MODE
+  85   1        ClearBuf((uint8_t *)&mapGDRAM,sizeof(mapGDRAM));
+  86   1      #endif
+  87   1        SetFlash(0xFF,0xFF);
+  88   1      }
+  89          
+  90          #ifndef GRAPHIC_MODE
+              void DisplayString(u8 X,u8 Y,u8 *ptr)
+              {
+                u8 i;
+                lcd_wcmd(0x30);
+                switch(X)
+                 {
+                   case 0:  Y+=0x80;break;
+                   case 1:  Y+=0x90;break;
+                   case 2:  Y+=0x88;break;
+                   case 3:  Y+=0x98;break;
+                   default: break;
+                 }
+                 lcd_wcmd(Y); // 定位显示起始地址
+                i = 0;
+                while(ptr[i])
+                  { 
+                    lcd_wdat(ptr[i]);//显示汉字时注意码值，连续两个码表示一个汉字
+                  i++;
+                  if(i%16 == 0)
+                  {
+                    X++;
+                    X %= 4;
+                    lcd_wcmd(0x30);
+                    switch(X)
+                     {
+C51 COMPILER V9.57.0.0   LCD12864                                                          06/09/2022 11:28:17 PAGE 3   
+
+                     case 0:  Y=0x80;break;
+                     case 1:  Y=0x90;break;
+                     case 2:  Y=0x88;break;
+                     case 3:  Y=0x98;break;
+                     default: break;
+                     }
+                     lcd_wcmd(Y);
+                  }
+                  }
+                while((i%16) != 0)
+                  { 
+                  lcd_wdat(' ');
+                  i++;
+                  }
+              }
+              /*
+              void word(u8 X,u8 Y,u8 c)
+              {
+                lcd_wcmd(0x30);
+                switch(X)
+                {
+                  case 0:  Y|=0x80;break;
+                  case 1:  Y|=0x90;break;
+                  case 2:  Y|=0x88;break;
+                  case 3:  Y|=0x98;break;
+                  default: break;
+                }
+                lcd_wcmd(Y);
+                lcd_wdat(c);
+              }*/
+              #endif
+ 147          
+ 148          #ifdef GRAPHIC_MODE
+ 149          
+ 150          #include "AsciiFont.h"
+ 151          #include "HebrewFont.h"
+ 152          
+ 153          bool bRight2Left;
+ 154          static uint8_t lcdRow = 0;  //VT12864C一共支持4行中文显示
+ 155          static uint8_t lcdCol = 0;  //每行支持8个汉字或16个ASCII字符，最多显示64个char
+ 156          uint8_t mapGDRAM[LCD_HEIGHT][LCD_WIDTH/8];//GDRAM map, y=64, x=16*8
+ 157           
+ 158          void BitBlt(uint8_t * pBmp)
+ 159          { // total 1024 bytes
+ 160   1        uint8_t i,j;
+ 161   1        const uint8_t * pNextFrame=pBmp+512;  //half
+ 162   1      
+ 163   1        for(i=0;i<(LCD_HEIGHT/2);i++) //y
+ 164   1        { //因为VT12864的显示RAM是交叉且颠倒的，所以要“隔行”颠倒扫描（这部分处理在BmpToLcd程序中）
+ 165   2          lcd_wcmd(cnLCDGraphicOn);     //扩充指令集
+ 166   2          lcd_wcmd(cnCmdSetGRam | i);   //设置Y
+ 167   2          lcd_wcmd(cnCmdSetGRam | 0x00);  //设置X
+ 168   2          lcd_wcmd(cnLCDSetBasic);
+ 169   2      #ifdef PWM_AUDIO
+ 170   2          if(WavNeedRead)WavReadTask();
+ 171   2      #endif  
+ 172   2          for(j=0;j<16;j++) //x=8*16=128
+ 173   2          { //j=0~15时输出上半部分128*32的数据，j=15~31时输出下半部分128*32的数据。
+ 174   3            lcd_wdat(*pBmp);
+ 175   3            pBmp++; 
+ 176   3          }
+ 177   2          for(j=16;j<32;j++)  //x
+C51 COMPILER V9.57.0.0   LCD12864                                                          06/09/2022 11:28:17 PAGE 4   
+
+ 178   2          { //j=0~15时输出上半部分128*32的数据，j=15~31时输出下半部分128*32的数据。
+ 179   3            lcd_wdat(*pNextFrame);
+ 180   3            pNextFrame++;
+ 181   3          }
+ 182   2      
+ 183   2        }
+ 184   1      }
+ 185          
+ 186          void DisplayFl(uint8_t X,uint8_t Y,bool e)
+ 187          {
+ 188   1      
+ 189   1        lcd_wcmd(cnLCDGraphicOn);     //扩充指令集
+ 190   1        lcd_wcmd(cnCmdSetGRam | (15+ASC_CHR_HEIGHT*(Y>1?(Y-2):Y)));   //设置Y
+ 191   1        lcd_wcmd(cnCmdSetGRam | X/2+(Y>1?8:0)); //设置X
+ 192   1        lcd_wcmd(cnLCDSetBasic);  
+ 193   1        if(X%2)
+ 194   1        {
+ 195   2          lcd_wdat(mapGDRAM[15+ASC_CHR_HEIGHT*Y][X-1]);
+ 196   2        }
+ 197   1        lcd_wdat(e?0xFF:mapGDRAM[15+ASC_CHR_HEIGHT*Y][X]);
+ 198   1      
+ 199   1      }
+ 200          
+ 201          #define HEBREW_START 0xD790
+ 202          #define HEBREW_END 0xD7AB
+ 203          
+ 204          bool CheckUnicode(uint8_t *pInfo)
+ 205          {
+ 206   1        while((*pInfo != '\0') && (*pInfo != '\n'))
+ 207   1        {
+ 208   2          if(*pInfo > 0x80)
+ 209   2          {
+ 210   3            return true;
+ 211   3          }
+ 212   2          pInfo++;
+ 213   2        }
+ 214   1        return false;
+ 215   1      }
+ 216          void LCDAddRow(void)
+ 217          {
+ 218   1        lcdRow++;
+ 219   1        lcdRow %= 4;
+ 220   1        lcdCol=0;
+ 221   1      }
+ 222          void WriteLCD(uint8_t *pInfo) //写数据到屏幕上显示
+ 223          {
+ 224   1      
+ 225   1        uint8_t x,y;
+ 226   1        uint8_t c;
+ 227   1      //  u8 utf[4];
+ 228   1        const typFNT_Ascii *Font;
+ 229   1        uint16_t iUnicode;
+ 230   1        bRight2Left = CheckUnicode(pInfo);
+ 231   1        
+ 232   1        if(pInfo == NULL) return;
+ 233   1        
+ 234   1        while((*pInfo != '\0') && (*pInfo != '\n'))
+ 235   1        { //不是结束字符
+ 236   2      //    dFont = NULL;
+ 237   2          c = *pInfo;
+ 238   2      
+ 239   2          lcdCol++;
+C51 COMPILER V9.57.0.0   LCD12864                                                          06/09/2022 11:28:17 PAGE 5   
+
+ 240   2          if(lcdCol > LCD_MAX_COL){   //要换行
+ 241   3      //      if(g_bShowNameList){
+ 242   3      //        break;  //only display 1 line
+ 243   3      //      }else{
+ 244   3      //        LCDAddRow();
+ 245   3      //      }
+ 246   3            LCDAddRow();
+ 247   3          }
+ 248   2          
+ 249   2          Font = &AsciiFont['?'-' ']; //unknow char
+ 250   2          if(c >= ' ')
+ 251   2          { //can display
+ 252   3            if(c <= 0x80){ //ASCII
+ 253   4              Font = &AsciiFont[c - ' '];
+ 254   4            }
+ 255   3            else
+ 256   3            { //UTF-8
+ 257   4              pInfo++;
+ 258   4      //        utf[0] = c;
+ 259   4      //        utf[1] = *pInfo;
+ 260   4              //if((utf[0] >= 0xC0) && (utf[0] <= 0xDF) && (utf[1] >= 0x80) && (utf[1] < 0xC0))
+ 261   4              { //2 bytes chars in UTF-8
+ 262   5      //          utf[0] &= 0x1F;
+ 263   5      //          utf[1] &= 0x3F;
+ 264   5      //          iUnicode = utf[0] << 6;
+ 265   5      //          iUnicode += utf[1];
+ 266   5                iUnicode = c;
+ 267   5                iUnicode <<= 8;
+ 268   5                iUnicode &= 0xFF00;
+ 269   5                iUnicode += *pInfo;
+ 270   5                if((iUnicode >= HEBREW_START) && (iUnicode <= HEBREW_END)){ //Hebrew
+ 271   6                  Font=&HebrewFont[iUnicode-HEBREW_START];
+ 272   6                }
+ 273   5      //          else if((iUnicode >= 0x0600) && (iUnicode <= 0x06FF)){  //Arab
+ 274   5      //            Font=&ArabFont[iUnicode-0x0600];
+ 275   5      //          }
+ 276   5              }
+ 277   4            }
+ 278   3          }
+ 279   2          if(lcdCol != 0) 
+ 280   2            x = lcdCol-1;
+ 281   2          else{
+ 282   3            x = 0;
+ 283   3            lcdCol = 1;
+ 284   3          }
+ 285   2      
+ 286   2          if(bRight2Left){
+ 287   3            x = (LCD_WIDTH/8-1)-x;
+ 288   3          }
+ 289   2          for(y=0;y<ASC_CHR_HEIGHT;y++)
+ 290   2          {
+ 291   3            mapGDRAM[y+ASC_CHR_HEIGHT*lcdRow][x] = Font->Msk[y];
+ 292   3          }
+ 293   2          pInfo++;
+ 294   2        };  //while
+ 295   1      
+ 296   1      }
+ 297          
+ 298          void WriteLCDico(uint8_t Row,uint8_t Col,uint8_t ico,uint8_t mask)  //写私邼战莵幕蕪袛示
+ 299          {
+ 300   1      
+ 301   1        uint8_t y;
+C51 COMPILER V9.57.0.0   LCD12864                                                          06/09/2022 11:28:17 PAGE 6   
+
+ 302   1        const typFNT_Ascii *Font;
+ 303   1        Font = &IcoFont[ico];
+ 304   1        for(y=0;y<ASC_CHR_HEIGHT;y++)
+ 305   1        {
+ 306   2          mapGDRAM[y+ASC_CHR_HEIGHT*Row][Col] = Font->Msk[y]&mask;
+ 307   2        }
+ 308   1      }
+ 309          #include "stdio.h"
+ 310          void DisplayString(uint8_t X,uint8_t Y,const char *ptr)
+ 311          {
+ 312   1        lcdRow = X;
+ 313   1        lcdCol = Y;
+ 314   1        WriteLCD((uint8_t *)ptr);
+ 315   1        BitBlt((uint8_t *)&mapGDRAM);
+ 316   1      }
+ 317          
+ 318          void DisplayIco(uint8_t X,uint8_t Y,uint8_t ico)
+ 319          {
+ 320   1        WriteLCDico(X,Y,ico,0xFF);
+ 321   1        BitBlt((uint8_t *)&mapGDRAM);
+ 322   1      }
+ 323          void DisplayCsq(uint8_t X,uint8_t Y,uint8_t csq)
+ 324          {
+ 325   1        uint8_t i;
+ 326   1        uint8_t msk = 0;
+ 327   1        csq /= 5;
+ 328   1        if(csq > 5)
+ 329   1        {
+ 330   2          csq = 5;
+ 331   2        }
+ 332   1        for(i=1;i<csq;i++)
+ 333   1        {
+ 334   2          msk >>= 2;
+ 335   2          msk |= 0xC0;
+ 336   2        }
+ 337   1        WriteLCDico(X,Y,4,(csq > 0)?0xff:0);
+ 338   1        WriteLCDico(X,Y+1,5,msk);
+ 339   1        BitBlt((uint8_t *)&mapGDRAM);
+ 340   1      }
+ 341          
+ 342          bool flg = false;
+ 343          uint16_t FlashTime = 0;
+ 344          uint8_t Fl_X = 0xFF;
+ 345          uint8_t Fl_Y = 0xFF;
+ 346          void SetFlash(uint8_t X,uint8_t Y)
+ 347          {
+ 348   1        Fl_X = Y;
+ 349   1        Fl_Y = X;
+ 350   1      }
+ 351          void FlashTask(void)
+ 352          {
+ 353   1        if((Fl_X == 0xFF) || (Fl_Y == 0xFF))
+ 354   1        {
+ 355   2          return;
+ 356   2        }
+ 357   1        if(++FlashTime == 300)
+ 358   1        {
+ 359   2          FlashTime = 0;
+ 360   2          DisplayFl(Fl_X,Fl_Y,flg);
+ 361   2          flg = !flg;
+ 362   2        }
+ 363   1      }
+C51 COMPILER V9.57.0.0   LCD12864                                                          06/09/2022 11:28:17 PAGE 7   
+
+ 364          
+ 365          #endif  
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1109    ----
+   CONSTANT SIZE    =   2112    ----
+   XDATA SIZE       =   1030      25
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2       2
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
